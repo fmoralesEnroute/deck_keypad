@@ -13,7 +13,7 @@ junit = "4.13.2"
 turbine = "1.1.0"
 orgJson = "20240303"
 robolectric = "4.14.1"
-roborazzi = "1.36.0"
+roborazzi = "1.75.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
