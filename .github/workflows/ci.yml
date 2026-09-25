@@ -25,7 +25,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4   # also validates the wrapper jar
       - run: ./gradlew lintDebug testDebugUnitTest assembleRelease
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-reports
           path: |
@@ -48,7 +48,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew verifyRoborazziDebug
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshot-diffs
           path: android-app/app/build/outputs/roborazzi/
