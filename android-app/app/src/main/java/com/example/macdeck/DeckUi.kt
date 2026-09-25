@@ -100,7 +100,11 @@ internal fun MacDeckTheme(content: @Composable () -> Unit) {
 // ------------------------------------------------------------------ deck ---
 
 @Composable
-internal fun DeckScreen(state: DeckState, onPress: (DeckButton) -> Unit, onUnpair: () -> Unit) {
+internal fun DeckScreen(
+    state: DeckState,
+    onPress: (app: String, button: DeckButton) -> Unit,
+    onUnpair: () -> Unit,
+) {
     var confirmUnpair by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
@@ -132,7 +136,8 @@ internal fun DeckScreen(state: DeckState, onPress: (DeckButton) -> Unit, onUnpai
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(buttons, key = { app + ":" + it.id }) { button ->
-                        DeckKey(button, enabled = state.status == Status.Connected) { onPress(button) }
+                        // `app` is the layout this key belongs to, even if a newer one arrives mid-tap.
+                        DeckKey(button, enabled = state.status == Status.Connected) { onPress(app, button) }
                     }
                 }
             }
@@ -360,7 +365,7 @@ private fun DeckScreenPreview() = MacDeckTheme {
     Box(Modifier.background(Graphite)) {
         DeckScreen(
             DeckState(status = Status.Connected, appName = "Desktop", buttons = previewButtons),
-            onPress = {}, onUnpair = {},
+            onPress = { _, _ -> }, onUnpair = {},
         )
     }
 }

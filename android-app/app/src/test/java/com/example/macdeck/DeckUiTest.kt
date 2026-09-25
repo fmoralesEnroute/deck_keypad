@@ -33,23 +33,30 @@ class DeckUiTest {
         DeckButton("1", "", "⏯", 0xFF3F7CAC.toInt()),
     )
 
-    private fun deck(status: Status, onPress: (DeckButton) -> Unit = {}, onUnpair: () -> Unit = {}) =
+    private fun deck(
+        status: Status,
+        onPress: (String, DeckButton) -> Unit = { _, _ -> },
+        onUnpair: () -> Unit = {},
+    ) =
         compose.setContent {
             MacDeckTheme {
-                DeckScreen(DeckState(status = status, appName = "Desktop", buttons = buttons), onPress, onUnpair)
+                DeckScreen(
+                    DeckState(status = status, app = "com.apple.finder", appName = "Desktop", buttons = buttons),
+                    onPress, onUnpair,
+                )
             }
         }
 
     @Test fun keysAreButtonsAndPressThem() {
-        val pressed = mutableListOf<DeckButton>()
-        deck(Status.Connected, onPress = { pressed += it })
+        val pressed = mutableListOf<Pair<String, DeckButton>>()
+        deck(Status.Connected, onPress = { app, button -> pressed += app to button })
 
         compose.onNodeWithText("Spotlight")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertHasClickAction()
             .assertIsEnabled()
             .performClick()
-        assertEquals(listOf(buttons[0]), pressed)
+        assertEquals(listOf("com.apple.finder" to buttons[0]), pressed)
     }
 
     @Test fun decorativeEmojiIsHiddenFromTalkBackButIconOnlyKeysKeepIt() {
@@ -82,7 +89,7 @@ class DeckUiTest {
 
     @Test fun emptyProfileShowsTheBundleId() {
         compose.setContent {
-            MacDeckTheme { DeckScreen(DeckState(status = Status.Connected, app = "com.figma.Desktop"), {}, {}) }
+            MacDeckTheme { DeckScreen(DeckState(status = Status.Connected, app = "com.figma.Desktop"), { _, _ -> }, {}) }
         }
         compose.onNodeWithText("com.figma.Desktop", substring = true).assertExists()
     }

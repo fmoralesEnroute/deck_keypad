@@ -359,6 +359,11 @@ def start_server_thread():
 def on_app_changed(bundle_id, app_name):
     if bundle_id == state["bundle_id"]:
         return
+    # e.g. Android Studio mirroring the phone: clicking the mirrored keys brings it to the
+    # front, which must not swap the keys out from under the click.
+    if bundle_id in load_profiles().get("ignore_apps", []):
+        print(f"Active app: {app_name} ({bundle_id}) is in ignore_apps; keeping the current keys")
+        return
     state["bundle_id"], state["app_name"] = bundle_id or "", app_name or ""
     print(f"Active app: {app_name} ({bundle_id})")
     if loop:

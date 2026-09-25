@@ -53,6 +53,11 @@ as you save; no restart needed.
 
 Apps without a profile get the `"default"` buttons.
 
+Apps listed in `"ignore_apps"` never change the keys: the phone keeps showing
+the previous app's buttons when one of them comes to the front. It ships with
+Android Studio, so clicking a phone mirrored (or emulated) in Android Studio
+doesn't swap the keys for the default ones.
+
 ### Action kinds
 
 | kind          | fields                         | example |

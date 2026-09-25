@@ -57,13 +57,21 @@ class DeckViewModelTest {
         assertEquals(0, transport.opened)
     }
 
-    @Test fun `press sends the button id with the current app`() = runTest {
-        transport.next { emit(open()); emit(WsEvent.Message(TestData.layoutJson)); awaitCancellation() }
+    @Test fun `press sends the app the button was drawn for, not the newest layout`() = runTest {
+        val newerLayout = """{"type":"layout","app":"com.google.android.studio","buttons":[{"id":"0"}]}"""
+        transport.next {
+            emit(open())
+            emit(WsEvent.Message(TestData.layoutJson))
+            emit(WsEvent.Message(newerLayout))
+            awaitCancellation()
+        }
         val vm = vm()
         vm.start()
         runCurrent()
+        assertEquals("com.google.android.studio", vm.state.value.app)
 
-        vm.press(vm.state.value.buttons.single())
+        // The UI passes the app of the grid the tap started on.
+        vm.press("com.x", DeckButton("0", "Go", "", 0))
         assertEquals(JSONObject(DeckProtocol.press("0", "com.x")).toMap(), JSONObject(transport.sent.last()).toMap())
     }
 

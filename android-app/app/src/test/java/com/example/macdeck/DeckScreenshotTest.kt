@@ -42,7 +42,7 @@ class DeckScreenshotTest {
     }
 
     private fun deck(status: Status) = capture("deck_${status.name.lowercase()}") {
-        DeckScreen(DeckState(status = status, appName = "Desktop", buttons = buttons), {}, {})
+        DeckScreen(DeckState(status = status, appName = "Desktop", buttons = buttons), { _, _ -> }, {})
     }
 
     @Test fun deckConnected() = deck(Status.Connected)
@@ -50,12 +50,12 @@ class DeckScreenshotTest {
 
     @Config(fontScale = 2f)
     @Test fun deckLargeFont() = capture("deck_font_2x") {
-        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons), {}, {})
+        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons), { _, _ -> }, {})
     }
 
     @Config(qualifiers = "w800dp-h400dp-land-xhdpi")
     @Test fun deckLandscape() = capture("deck_landscape") {
-        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons), {}, {})
+        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons), { _, _ -> }, {})
     }
 
     @Test fun pairScreen() = capture("pair") { PairScreen(onPair = { true }) }

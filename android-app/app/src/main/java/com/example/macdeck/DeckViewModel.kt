@@ -74,8 +74,13 @@ class DeckViewModel(
         _state.value = DeckState()
     }
 
-    fun press(button: DeckButton) {
-        send?.invoke(DeckProtocol.press(button.id, state.value.app))
+    /**
+     * [app] must be the app the button was drawn for, not whatever is current by the time
+     * the tap lands: a layout can arrive mid-tap (e.g. clicking a mirrored phone brings its
+     * window to the front on the Mac), and the agent resolves the button id within [app].
+     */
+    fun press(app: String, button: DeckButton) {
+        send?.invoke(DeckProtocol.press(button.id, app))
     }
 
     private fun launchSession() {

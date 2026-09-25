@@ -1,4 +1,5 @@
 {
+  "ignore_apps": ["com.google.android.studio"],
   "default": {
     "name": "Desktop",
     "buttons": [
@@ -11,6 +12,27 @@
     ]
   },
   "apps": {
+    "com.jetbrains.pycharm": {
+      "name": "PyCharm",
+      "buttons": [
+        { "label": "Run", "icon": "▶️", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["ctrl", "r"] } },
+        { "label": "Debug", "icon": "🐞", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["ctrl", "d"] } },
+        { "label": "Stop", "icon": "⏹️", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["cmd", "f2"] } },
+        { "label": "Breakpoint", "icon": "🔴", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["cmd", "f8"] } },
+        { "label": "Step over", "icon": "⤵️", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["f8"] } },
+        { "label": "Step into", "icon": "⬇️", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["f7"] } },
+        { "label": "Resume", "icon": "⏩", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "r"] } },
+        { "label": "Find action", "icon": "🔎", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "a"] } },
+        { "label": "Go to file", "icon": "📄", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "o"] } },
+        { "label": "Recent files", "icon": "🕘", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "e"] } },
+        { "label": "Reformat", "icon": "✨", "color": "#7C3AED", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "l"] } },
+        { "label": "Comment", "icon": "💬", "color": "#7C3AED", "action": { "kind": "hotkey", "keys": ["cmd", "/"] } },
+        { "label": "Rename", "icon": "✏️", "color": "#7C3AED", "action": { "kind": "hotkey", "keys": ["shift", "f6"] } },
+        { "label": "Terminal", "icon": "⌨️", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["alt", "f12"] } },
+        { "label": "Commit", "icon": "✅", "color": "#B45309", "action": { "kind": "hotkey", "keys": ["cmd", "k"] } },
+        { "label": "Push", "icon": "⬆️", "color": "#B45309", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "k"] } }
+      ]
+    },
     "com.microsoft.VSCode": {
       "name": "VS Code",
       "buttons": [
