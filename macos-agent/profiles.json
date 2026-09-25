@@ -80,9 +80,9 @@
     "com.spotify.client": {
       "name": "Spotify",
       "buttons": [
-        { "label": "Previous", "icon": "⏮️", "color": "#1DB954", "action": { "kind": "applescript", "script": "tell application \"Spotify\" to previous track" } },
-        { "label": "Play/Pause", "icon": "⏯️", "color": "#1DB954", "action": { "kind": "applescript", "script": "tell application \"Spotify\" to playpause" } },
-        { "label": "Next", "icon": "⏭️", "color": "#1DB954", "action": { "kind": "applescript", "script": "tell application \"Spotify\" to next track" } }
+        { "label": "Previous", "icon": "⏮️", "color": "#1DB954", "action": { "kind": "media", "key": "previous" } },
+        { "label": "Play/Pause", "icon": "⏯️", "color": "#1DB954", "action": { "kind": "media", "key": "play_pause" } },
+        { "label": "Next", "icon": "⏭️", "color": "#1DB954", "action": { "kind": "media", "key": "next" } }
       ]
     }
   }

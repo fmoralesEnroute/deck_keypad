@@ -62,13 +62,34 @@ Apps without a profile get the `"default"` buttons.
 | `open_app`    | `app`                          | `"Spotify"` |
 | `open_url`    | `url`                          | `"https://github.com"` |
 | `shell`       | `cmd`                          | `"say hello"` |
-| `applescript` | `script`                       | `"tell application \"Spotify\" to playpause"` |
+| `applescript` | `script`                       | `"tell application \"Music\" to playpause"` |
+| `media`       | `key`                          | `"play_pause"`, `"next"`, `"previous"`, `"volume_up"`, `"volume_down"`, `"mute"` |
 | `delay`       | `ms`                           | `300` |
 | `sequence`    | `steps` (a list of actions)    | see the VS Code "git status" key |
+
+`media` presses the keyboard's media keys, so it controls whatever is playing
+and needs no extra permission. `applescript` additionally needs **Automation**
+permission (System Settings → Privacy & Security → Automation) for the app you
+run the agent from to control the target app.
 
 Modifiers: `cmd`, `shift`, `ctrl`, `alt`/`opt`. Keys: letters, digits,
 punctuation, `f1`–`f12`, `up/down/left/right`, `return`, `tab`, `space`,
 `escape`, `delete`, `home`, `end`, `pageup`, `pagedown`.
+
+## Troubleshooting
+
+**A key does nothing.** Look at the agent's terminal: every press prints
+`Press: <label> -> <kind>`, and a failure prints `Action failed:` with the
+reason.
+
+- *macOS is blocking keystrokes*: turn on your terminal app (Terminal, iTerm…)
+  under System Settings → Privacy & Security → **Accessibility**, then quit and
+  restart the agent. If it's already on, toggle it off and on. macOS sometimes
+  keeps a stale entry after a terminal or Python update.
+- *macOS blocked the AppleScript*: allow your terminal to control that app under
+  Privacy & Security → **Automation**. If it isn't listed, run
+  `tccutil reset AppleEvents com.googlecode.iterm2` (use your terminal's bundle
+  ID) and press the key again to get the prompt.
 
 ## How it works
 

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import websockets
 from AppKit import (
+    NSEvent,
     NSWorkspace,
     NSWorkspaceApplicationKey,
     NSWorkspaceDidActivateApplicationNotification,
@@ -35,10 +36,14 @@ from Quartz import (
     CGEventKeyboardSetUnicodeString,
     CGEventPost,
     CGEventSetFlags,
+    CGEventSourceCreate,
     kCGEventFlagMaskAlternate,
     kCGEventFlagMaskCommand,
     kCGEventFlagMaskControl,
+    kCGEventFlagMaskNumericPad,
+    kCGEventFlagMaskSecondaryFn,
     kCGEventFlagMaskShift,
+    kCGEventSourceStateHIDSystemState,
     kCGHIDEventTap,
 )
 
@@ -76,26 +81,126 @@ KEYCODES = {
 }
 
 
+# Virtual key codes of the modifier keys themselves (left-hand keys).
+MODIFIER_KEYCODES = {
+    kCGEventFlagMaskCommand: 55,
+    kCGEventFlagMaskShift: 56,
+    kCGEventFlagMaskAlternate: 58,
+    kCGEventFlagMaskControl: 59,
+}
+
+# A real keyboard reports these keys with the fn flag (and arrows also with the keypad
+# flag). macOS system shortcuts are defined with those flags, e.g. Mission Control is
+# ctrl+fn+up, so a synthetic ctrl+up without them never triggers it.
+ARROW_KEYS = {"left", "right", "up", "down"}
+FN_KEYS = ARROW_KEYS | {"home", "end", "pageup", "pagedown", "forwarddelete"} | {f"f{i}" for i in range(1, 13)}
+
+ACCESSIBILITY_HELP = (
+    "macOS is blocking keystrokes from the agent. Open System Settings → Privacy & Security → "
+    "Accessibility, turn on the app you run agent.py from (e.g. iTerm), then restart the agent."
+)
+
+
+def accessibility_trusted(prompt=False):
+    """Whether macOS lets this process post keyboard events. prompt=True shows the system dialog."""
+    try:
+        from ApplicationServices import AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt
+    except ImportError:
+        return True
+    return bool(AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: prompt}))
+
+
+def require_accessibility():
+    # Without the permission CGEventPost silently drops events; say so instead.
+    if not accessibility_trusted():
+        raise PermissionError(ACCESSIBILITY_HELP)
+
+
 def press_hotkey(keys):
-    flags, code = 0, None
+    require_accessibility()
+    modifiers, code, key_flags = [], None, 0
     for k in keys:
         k = k.lower()
         if k in MODIFIERS:
-            flags |= MODIFIERS[k]
+            if MODIFIERS[k] not in modifiers:
+                modifiers.append(MODIFIERS[k])
         elif k in KEYCODES:
             code = KEYCODES[k]
+            if k in FN_KEYS:
+                key_flags |= kCGEventFlagMaskSecondaryFn
+            if k in ARROW_KEYS:
+                key_flags |= kCGEventFlagMaskNumericPad
         else:
             raise ValueError(f"Unknown key: {k!r}")
     if code is None:
         raise ValueError(f"Hotkey needs one non-modifier key: {keys}")
-    for is_down in (True, False):
-        ev = CGEventCreateKeyboardEvent(None, code, is_down)
+
+    # Press the modifiers, tap the key, release the modifiers — like a person would.
+    # System shortcuts (Spotlight, screenshots, Mission Control) need the real modifier
+    # key events, not just flags on the key event.
+    source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState)
+
+    def post(keycode, is_down, flags):
+        ev = CGEventCreateKeyboardEvent(source, keycode, is_down)
         CGEventSetFlags(ev, flags)
         CGEventPost(kCGHIDEventTap, ev)
         time.sleep(0.01)
 
+    flags = 0
+    for m in modifiers:
+        flags |= m
+        post(MODIFIER_KEYCODES[m], True, flags)
+    post(code, True, flags | key_flags)
+    post(code, False, flags | key_flags)
+    for m in reversed(modifiers):
+        flags &= ~m
+        post(MODIFIER_KEYCODES[m], False, flags)
+
+
+# Media keys (NX_KEYTYPE_*): they control whatever is playing (Spotify, Music, a browser tab)
+# and only need the Accessibility permission, not per-app Automation.
+MEDIA_KEYS = {
+    "play_pause": 16, "next": 19, "previous": 20,
+    "volume_up": 0, "volume_down": 1, "mute": 7,
+}
+
+
+def press_media_key(key):
+    require_accessibility()
+    if key not in MEDIA_KEYS:
+        raise ValueError(f"Unknown media key: {key!r} (use one of {', '.join(MEDIA_KEYS)})")
+    code = MEDIA_KEYS[key]
+    for is_down in (True, False):
+        state = 0xA if is_down else 0xB
+        ev = NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_(
+            14,             # NSEventTypeSystemDefined
+            (0, 0),
+            state << 8,
+            0, 0, None,
+            8,              # NX_SUBTYPE_AUX_CONTROL_BUTTONS
+            (code << 16) | (state << 8),
+            -1,
+        )
+        CGEventPost(kCGHIDEventTap, ev.CGEvent())
+        time.sleep(0.01)
+
+
+def run_applescript(script):
+    """Run AppleScript and surface failures; osascript's errors used to vanish."""
+    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=15)
+    if result.returncode != 0:
+        error = result.stderr.strip()
+        if "-1743" in error or "Not authorized" in error:
+            raise PermissionError(
+                "macOS blocked the AppleScript. Open System Settings → Privacy & Security → "
+                "Automation and allow the app you run agent.py from (e.g. iTerm) to control the "
+                f"target app. ({error})"
+            )
+        raise RuntimeError(error or f"osascript exited with {result.returncode}")
+
 
 def type_text(text):
+    require_accessibility()
     for ch in text:
         units = len(ch.encode("utf-16-le")) // 2
         for is_down in (True, False):
@@ -121,7 +226,9 @@ def run_action(action):
     elif kind == "shell":
         subprocess.Popen(action["cmd"], shell=True)
     elif kind == "applescript":
-        subprocess.Popen(["osascript", "-e", action["script"]])
+        run_applescript(action["script"])
+    elif kind == "media":
+        press_media_key(action["key"])
     elif kind == "delay":
         time.sleep(action.get("ms", 100) / 1000)
     elif kind == "sequence":
@@ -308,17 +415,16 @@ def lan_ip():
 
 
 def check_accessibility():
-    try:
-        from ApplicationServices import AXIsProcessTrusted
-        if not AXIsProcessTrusted():
-            print(
-                "\n⚠️  Keystrokes will be ignored until you allow this app to control\n"
-                "   your Mac: System Settings → Privacy & Security → Accessibility,\n"
-                "   then enable the app you ran this from (Terminal, iTerm, VS Code…)\n"
-                "   and restart the agent.\n"
-            )
-    except ImportError:
-        pass
+    # prompt=True makes macOS show its dialog and add the terminal app to the Accessibility list.
+    if not accessibility_trusted(prompt=True):
+        print(
+            "\n⚠️  Keystrokes will be ignored until you allow this app to control\n"
+            "   your Mac: System Settings → Privacy & Security → Accessibility,\n"
+            "   then enable the app you ran this from (Terminal, iTerm, VS Code…)\n"
+            "   and restart the agent.\n"
+        )
+    else:
+        print("Accessibility permission: OK")
 
 
 def show_pairing(ip):
