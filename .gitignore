@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Android / Gradle
+android-app/local.properties
+android-app/.gradle/
+android-app/.kotlin/
+android-app/build/
+android-app/app/build/
+android-app/captures/
+android-app/.idea/*
+!android-app/.idea/codeStyles/
+*.iml
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Agent: virtualenv and per-Mac secrets (pairing token, TLS key/cert)
+macos-agent/.venv/
+macos-agent/__pycache__/
+macos-agent/.token
+macos-agent/.cert.pem
+macos-agent/.key.pem

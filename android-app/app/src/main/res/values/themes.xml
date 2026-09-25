@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="graphite">#FF1E2023</color>
+
+    <!-- Shown until the first Compose frame, so launch never flashes a different color. -->
+    <style name="Theme.MacDeck.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/graphite</item>
+        <item name="postSplashScreenTheme">@style/Theme.MacDeck</item>
+    </style>
+
+    <style name="Theme.MacDeck" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/graphite</item>
+    </style>
+</resources>

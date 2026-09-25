@@ -1,0 +1,89 @@
+{
+  "default": {
+    "name": "Desktop",
+    "buttons": [
+      { "label": "Spotlight", "icon": "🔍", "color": "#5B6770", "action": { "kind": "hotkey", "keys": ["cmd", "space"] } },
+      { "label": "Mission Control", "icon": "🪟", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["ctrl", "up"] } },
+      { "label": "Screenshot", "icon": "📸", "color": "#8E6C8A", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "4"] } },
+      { "label": "VS Code", "icon": "💻", "color": "#2F7FC1", "action": { "kind": "open_app", "app": "Visual Studio Code" } },
+      { "label": "Spotify", "icon": "🎵", "color": "#1DB954", "action": { "kind": "open_app", "app": "Spotify" } },
+      { "label": "Lock", "icon": "🔒", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["ctrl", "cmd", "q"] } }
+    ]
+  },
+  "apps": {
+    "com.microsoft.VSCode": {
+      "name": "VS Code",
+      "buttons": [
+        { "label": "Commands", "icon": "⌘", "color": "#2F7FC1", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "p"] } },
+        { "label": "Quick open", "icon": "📄", "color": "#2F7FC1", "action": { "kind": "hotkey", "keys": ["cmd", "p"] } },
+        { "label": "Terminal", "icon": "⌨️", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["ctrl", "`"] } },
+        { "label": "Debug", "icon": "🐞", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["f5"] } },
+        { "label": "Format", "icon": "✨", "color": "#7C3AED", "action": { "kind": "hotkey", "keys": ["shift", "alt", "f"] } },
+        { "label": "Comment", "icon": "💬", "color": "#0F766E", "action": { "kind": "hotkey", "keys": ["cmd", "/"] } },
+        { "label": "Sidebar", "icon": "📁", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "b"] } },
+        { "label": "Save all", "icon": "💾", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "s"] } },
+        { "label": "git status", "icon": "🌿", "color": "#B45309", "action": { "kind": "sequence", "steps": [
+          { "kind": "hotkey", "keys": ["ctrl", "`"] },
+          { "kind": "delay", "ms": 300 },
+          { "kind": "text", "text": "git status\n" }
+        ] } }
+      ]
+    },
+    "com.google.Chrome": {
+      "name": "Chrome",
+      "buttons": [
+        { "label": "New tab", "icon": "➕", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "t"] } },
+        { "label": "Reopen tab", "icon": "↩️", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "t"] } },
+        { "label": "Reload", "icon": "🔄", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["cmd", "r"] } },
+        { "label": "Back", "icon": "⬅️", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "["] } },
+        { "label": "DevTools", "icon": "🛠️", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "i"] } },
+        { "label": "Close tab", "icon": "✖️", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["cmd", "w"] } }
+      ]
+    },
+    "com.apple.Safari": {
+      "name": "Safari",
+      "buttons": [
+        { "label": "New tab", "icon": "➕", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "t"] } },
+        { "label": "Reopen tab", "icon": "↩️", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "t"] } },
+        { "label": "Reload", "icon": "🔄", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["cmd", "r"] } },
+        { "label": "Reader", "icon": "📖", "color": "#8E6C8A", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "r"] } },
+        { "label": "Close tab", "icon": "✖️", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["cmd", "w"] } }
+      ]
+    },
+    "com.apple.finder": {
+      "name": "Finder",
+      "buttons": [
+        { "label": "New window", "icon": "🪟", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "n"] } },
+        { "label": "New folder", "icon": "📁", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "n"] } },
+        { "label": "Go to folder", "icon": "🧭", "color": "#0F766E", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "g"] } },
+        { "label": "Hidden files", "icon": "👁️", "color": "#8E6C8A", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "."] } },
+        { "label": "Get info", "icon": "ℹ️", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "i"] } }
+      ]
+    },
+    "com.tinyspeck.slackmacgap": {
+      "name": "Slack",
+      "buttons": [
+        { "label": "Jump to", "icon": "🔎", "color": "#611F69", "action": { "kind": "hotkey", "keys": ["cmd", "k"] } },
+        { "label": "Unreads", "icon": "📬", "color": "#611F69", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "a"] } },
+        { "label": "Threads", "icon": "🧵", "color": "#611F69", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "t"] } },
+        { "label": "On my way", "icon": "🏃", "color": "#0F766E", "action": { "kind": "text", "text": "On my way! 🏃" } }
+      ]
+    },
+    "us.zoom.xos": {
+      "name": "Zoom",
+      "buttons": [
+        { "label": "Mute", "icon": "🎙️", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "a"] } },
+        { "label": "Video", "icon": "🎥", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "v"] } },
+        { "label": "Share", "icon": "🖥️", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "s"] } }
+      ]
+    },
+    "com.spotify.client": {
+      "name": "Spotify",
+      "buttons": [
+        { "label": "Previous", "icon": "⏮️", "color": "#1DB954", "action": { "kind": "applescript", "script": "tell application \"Spotify\" to previous track" } },
+        { "label": "Play/Pause", "icon": "⏯️", "color": "#1DB954", "action": { "kind": "applescript", "script": "tell application \"Spotify\" to playpause" } },
+        { "label": "Next", "icon": "⏭️", "color": "#1DB954", "action": { "kind": "applescript", "script": "tell application \"Spotify\" to next track" } }
+      ]
+    }
+  }
+}
