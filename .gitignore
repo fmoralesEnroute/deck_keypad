@@ -18,7 +18,9 @@ android-app/.idea/*
 
 # Agent: virtualenv and per-Mac secrets (pairing token, TLS key/cert)
 macos-agent/.venv/
-macos-agent/__pycache__/
+__pycache__/
+*.pyc
+.pytest_cache/
 macos-agent/.token
 macos-agent/.cert.pem
 macos-agent/.key.pem

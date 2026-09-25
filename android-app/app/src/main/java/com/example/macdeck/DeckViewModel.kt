@@ -31,6 +31,8 @@ data class DeckState(
     val isHome: Boolean = false,
     /** A pairing `agent.py --usb` sent over the cable, waiting for the user to confirm. */
     val usbOffer: Pairing? = null,
+    /** What the agent supports; null until connected, or for agents too old to say. */
+    val features: Set<String>? = null,
 )
 
 /** 1s, 2s, 4s, 8s, then 10s between attempts. */
@@ -56,6 +58,8 @@ class DeckViewModel(
     private var started = false
     private var session: Job? = null
     private var send: ((String) -> Boolean)? = null
+    /** Image bytes by reference ("sha1:…"). The agent sends each image once per connection. */
+    private val images = mutableMapOf<String, String>()
 
     fun start() {
         started = true
@@ -168,8 +172,10 @@ class DeckViewModel(
                         send = event.send
                         event.send(DeckProtocol.hello(pairing.token))
                     }
-                    is WsEvent.Message -> DeckProtocol.parseLayout(event.text)?.let { layout ->
+                    is WsEvent.Message -> DeckProtocol.parseLayout(event.text)?.let { parsed ->
                         attempt = 0
+                        images += parsed.images
+                        val layout = withImages(parsed)
                         _state.update {
                             it.copy(
                                 status = Status.Connected,
@@ -179,6 +185,7 @@ class DeckViewModel(
                                 home = layout.home,
                                 pin = layout.pin,
                                 isHome = layout.isHome,
+                                features = layout.features,
                                 // A different app on the Mac brings its keys back; a re-sent
                                 // layout for the same app (e.g. after reconnecting) doesn't.
                                 showingHome = it.showingHome && layout.app == it.app && layout.home != null,
@@ -201,6 +208,15 @@ class DeckViewModel(
             val networkChanged = withTimeoutOrNull(backoff(attempt++)) { network.networkChanges().first() } != null
             if (networkChanged) attempt = 0
         }
+    }
+
+    /** Swap image references for the bytes (older agents send bytes inline: kept as they are). */
+    private fun withImages(layout: DeckProtocol.Layout): DeckProtocol.Layout {
+        fun List<DeckButton>.resolved() = map { b ->
+            val ref = b.image
+            if (ref != null && ref.startsWith("sha1:")) b.copy(image = images[ref]) else b
+        }
+        return layout.copy(buttons = layout.buttons.resolved(), home = layout.home?.let { it.copy(buttons = it.buttons.resolved()) })
     }
 
     companion object {

@@ -1,0 +1,59 @@
+{
+  "type": "layout",
+  "features": [
+    "home",
+    "pins",
+    "reorder",
+    "images"
+  ],
+  "app": "com.jetbrains.pycharm",
+  "appName": "PyCharm",
+  "buttons": [
+    {
+      "id": "0",
+      "label": "Run",
+      "icon": "▶️",
+      "color": "#15803D"
+    }
+  ],
+  "isHome": false,
+  "home": {
+    "app": "macdeck.home",
+    "appName": "Desktop",
+    "buttons": [
+      {
+        "id": "pin:com.jetbrains.pycharm",
+        "label": "PyCharm",
+        "icon": "",
+        "color": "#5B6770",
+        "pinned": "com.jetbrains.pycharm",
+        "image": "sha1:74987b8c81bf22a77bd3ce5119af703cb7b0ebd1"
+      },
+      {
+        "id": "0",
+        "label": "Spotlight",
+        "icon": "🔍",
+        "color": "#5B6770"
+      },
+      {
+        "id": "1",
+        "label": "Spotify",
+        "icon": "",
+        "color": "#1DB954",
+        "image": "sha1:2bc93541eff3285ff4b7f579920cad2e0ab8bfda"
+      },
+      {
+        "id": "2",
+        "label": "Lock",
+        "icon": "🔒",
+        "color": "#B5543A"
+      }
+    ]
+  },
+  "onHome": false,
+  "pinned": true,
+  "images": {
+    "sha1:2bc93541eff3285ff4b7f579920cad2e0ab8bfda": "bG9nbzpzcG90aWZ5LWljb24=",
+    "sha1:74987b8c81bf22a77bd3ce5119af703cb7b0ebd1": "bG9nbzpweWNoYXJt"
+  }
+}

@@ -136,7 +136,11 @@ punctuation, `f1`–`f12`, `up/down/left/right`, `return`, `tab`, `space`,
 
 ## Troubleshooting
 
-The agent restarts itself when `agent.py` changes (if the new version compiles),
+If the phone says **agent.py is out of date**, the agent running on the Mac
+doesn't announce a feature this app uses (Home, pins, rearranging or images).
+Update `macos-agent/` and restart it.
+
+The agent restarts itself when any of its code changes (if it all compiles),
 so updates apply without restarting it by hand. `profiles.json` reloads on save.
 
 **"Can't reach your Mac".** Check the host the phone saved matches your Mac's
@@ -198,7 +202,34 @@ cd android-app
 ./gradlew assembleRelease        # R8-minified release build
 ```
 
+Agent tests (from `macos-agent/`, in the virtualenv):
+
+```bash
+pip install -r requirements-dev.txt
 ```
+```bash
+python -m pytest tests
+```
+
+`protocol/layout-example.json` is a real layout message from the agent. Both the
+agent's tests and the app's `ProtocolContractTest` check it, so neither side can
+change the message format without the other noticing. After an intended change,
+regenerate it with `UPDATE_PROTOCOL=1 python -m pytest tests/test_protocol.py`.
+
+```
+macos-agent/
+  agent.py              entry point: arguments, startup, frontmost-app watcher
+  macdeck_agent/
+    actions.py          hotkeys, text, media keys, apps, AppleScript
+    icons.py            logos and app icons, sent to each phone once by hash
+    home.py             profiles, Home keys, pins, order, layout messages
+    server.py           the WebSocket server
+    pairing.py          token, TLS certificate, QR code, Wi-Fi address
+    usb.py              --usb: adb tunnel (repaired if adb restarts), pairing
+    reload.py           restart when the agent's code changes
+    config.py, store.py paths, features; safe JSON writes
+  tests/                pytest suite
+
 app/src/main/java/com/example/macdeck/
   Pairing.kt         pairing data, QR parsing and validation
   DeckProtocol.kt    wire format (pure Kotlin, JVM-testable)
@@ -206,7 +237,12 @@ app/src/main/java/com/example/macdeck/
   PairingStore.kt    persistence
   NetworkMonitor.kt  reconnect immediately when the network changes
   DeckViewModel.kt   connection lifecycle and UI state
-  DeckUi.kt          Compose UI
+  DeckScreenModel.kt what the deck screen shows (pure, unit-tested)
+  MacDeckApp.kt      root composable, USB pairing dialog
+  DeckScreen.kt      header (Home · Pin · Edit · Unpair), notices
+  KeyGrid.kt         keys, drag-to-rearrange
+  PairScreen.kt      pairing screen
+  Theme.kt           colors and theme
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint, the tests and a release build on

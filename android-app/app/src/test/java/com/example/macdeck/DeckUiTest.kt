@@ -112,7 +112,7 @@ class DeckUiTest {
 
     private val pycharm = DeckState(
         status = Status.Connected, app = "com.jetbrains.pycharm", appName = "PyCharm", buttons = buttons, home = home,
-        pin = PinState.NotPinned,
+        pin = PinState.NotPinned, features = DeckProtocol.REQUIRED_FEATURES,
     )
 
     @Test fun pinTogglesTheCurrentApp() {
@@ -208,6 +208,57 @@ class DeckUiTest {
         assertEquals(listOf(listOf("pin:com.jetbrains.pycharm", "0")), orders)
     }
 
+    /** Regression: the second drag in one edit session used to move a stale copy of the keys. */
+    @Test fun everyDragInOneEditSessionIsSaved() {
+        val keys = listOf("A", "B", "C").mapIndexed { i, l -> DeckButton("$i", l, "", 0) }
+        var state by mutableStateOf(
+            DeckState(status = Status.Connected, app = "x", appName = "Desktop", buttons = keys, isHome = true,
+                features = DeckProtocol.REQUIRED_FEATURES)
+        )
+        val sent = mutableListOf<List<String>>()
+        compose.setContent {
+            MacDeckTheme {
+                DeckScreen(state, { _, _ -> }, {}, onReorderHome = { ids ->
+                    sent += ids
+                    state = state.copy(buttons = ids.map { id -> keys.first { it.id == id } })  // as the ViewModel does
+                })
+            }
+        }
+        compose.onNodeWithContentDescription("Edit Home keys").performClick()
+
+        drag("A", "B")   // A takes B's slot:            B A C
+        drag("B", "A")   // back to the original order:  A B C (must still be saved)
+        drag("C", "A")   // C takes A's (first) slot:    C A B
+        assertEquals(listOf(listOf("1", "0", "2"), listOf("0", "1", "2"), listOf("2", "0", "1")), sent)
+        assertEquals(listOf("C", "A", "B"), state.buttons.map { it.label })
+    }
+
+    private fun drag(from: String, onto: String) {
+        val a = compose.onNodeWithText(from).fetchSemanticsNode().boundsInRoot
+        val b = compose.onNodeWithText(onto).fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput {
+            down(a.center)
+            repeat(10) { moveBy((b.center - a.center) / 10f) }
+            up()
+        }
+        compose.waitForIdle()
+    }
+
+    @Test fun anOutdatedAgentGetsANoticeAndNoEditOrPin() {
+        homeScreen(pycharm.copy(features = null, pin = PinState.Unsupported))
+        compose.onNodeWithText("agent.py on your Mac is out of date", substring = true).assertExists()
+        compose.onNodeWithContentDescription("Pin to Home").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Home keys").performClick()
+    }
+
+    @Test fun usbPairingDialogShowsTheCertificateEnding() {
+        val answers = mutableListOf<Boolean>()
+        compose.setContent { MacDeckTheme { UsbPairingDialog(TestData.usbPairing) { answers += it } } }
+        compose.onNodeWithText("certificate ends in …${TestData.FINGERPRINT.takeLast(6)}", substring = true).assertExists()
+        compose.onNodeWithText("Connect").performClick()
+        assertEquals(listOf(true), answers)
+    }
+
     @Test fun talkBackCanMoveKeysWithoutDragging() {
         val orders = mutableListOf<List<String>>()
         homeScreen(onReorder = { orders += it })
@@ -219,7 +270,7 @@ class DeckUiTest {
     }
 
     @Test fun anAppWithoutItsOwnKeysShowsAnEditableHome() {
-        homeScreen(DeckState(status = Status.Connected, app = "com.unknown", appName = "Desktop", buttons = home.buttons, isHome = true))
+        homeScreen(DeckState(status = Status.Connected, app = "com.unknown", appName = "Desktop", buttons = home.buttons, isHome = true, features = DeckProtocol.REQUIRED_FEATURES))
         compose.onNodeWithContentDescription("Edit Home keys").assertExists()
         compose.onNodeWithContentDescription("Home keys").assertDoesNotExist()
     }

@@ -18,7 +18,10 @@ data class DeckButton(
     val label: String,
     val icon: String,
     val color: Int,
-    /** Base64 PNG, e.g. the app's real macOS icon; shown instead of [icon]. */
+    /**
+     * Base64 PNG shown instead of [icon] (an app icon or logo). On the wire it's a reference
+     * ("sha1:…") into [DeckProtocol.Layout.images]; the ViewModel swaps in the bytes.
+     */
     val image: String? = null,
     /** Set on Home keys for pinned apps: the bundle ID, so the key can be unpinned. */
     val pinnedApp: String? = null,
@@ -32,6 +35,9 @@ object DeckProtocol {
 
     const val DEFAULT_COLOR = 0xFF5B6770.toInt()
 
+    /** What this app needs from the agent. Anything missing means agent.py is out of date. */
+    val REQUIRED_FEATURES = setOf("home", "pins", "reorder", "images")
+
     /** The app id presses from the Home keys carry; the agent maps it to its "default" profile. */
     const val HOME_APP = "macdeck.home"
 
@@ -44,6 +50,10 @@ object DeckProtocol {
         val pin: PinState = PinState.Unsupported,
         /** These are the Home keys themselves (the app in front has no keys of its own). */
         val isHome: Boolean = false,
+        /** What the agent supports; null for agents older than feature announcements. */
+        val features: Set<String>? = null,
+        /** Image bytes (base64 PNG) the agent hasn't sent this connection before, by reference. */
+        val images: Map<String, String> = emptyMap(),
     )
 
     fun hello(token: String): String = JSONObject().put("type", "hello").put("token", token).toString()
@@ -63,13 +73,20 @@ object DeckProtocol {
         val msg = runCatching { JSONObject(text) }.getOrNull() ?: return null
         if (msg.optStringOrNull("type") != "layout") return null
         val home = msg.optJSONObject("home")?.let { parseKeys(it, defaultApp = HOME_APP) }
+        val features = msg.optJSONArray("features")?.let { arr -> (0 until arr.length()).map(arr::optString).toSet() }
         val pin = when {
+            features != null && "pins" !in features -> PinState.Unsupported
             msg.optBoolean("onHome") -> PinState.OnHome
             !msg.has("pinned") -> PinState.Unsupported
             msg.optBoolean("pinned") -> PinState.Pinned
             else -> PinState.NotPinned
         }
-        return parseKeys(msg, defaultApp = "").copy(home = home, pin = pin, isHome = msg.optBoolean("isHome"))
+        val images = msg.optJSONObject("images")?.let { o ->
+            o.keys().asSequence().mapNotNull { k -> o.optStringOrNull(k)?.let { k to it } }.toMap()
+        }.orEmpty()
+        return parseKeys(msg, defaultApp = "").copy(
+            home = home, pin = pin, isHome = msg.optBoolean("isHome"), features = features, images = images,
+        )
     }
 
     private fun parseKeys(msg: JSONObject, defaultApp: String): Layout {

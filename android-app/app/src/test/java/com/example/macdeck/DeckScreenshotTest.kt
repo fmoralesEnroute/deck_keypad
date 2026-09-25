@@ -43,7 +43,7 @@ class DeckScreenshotTest {
     }
 
     private fun deck(status: Status) = capture("deck_${status.name.lowercase()}") {
-        DeckScreen(DeckState(status = status, appName = "Desktop", buttons = buttons), { _, _ -> }, {})
+        DeckScreen(DeckState(status = status, appName = "Desktop", buttons = buttons, features = DeckProtocol.REQUIRED_FEATURES), { _, _ -> }, {})
     }
 
     @Test fun deckConnected() = deck(Status.Connected)
@@ -51,17 +51,18 @@ class DeckScreenshotTest {
 
     @Config(fontScale = 2f)
     @Test fun deckLargeFont() = capture("deck_font_2x") {
-        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons), { _, _ -> }, {})
+        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons, features = DeckProtocol.REQUIRED_FEATURES), { _, _ -> }, {})
     }
 
     @Config(qualifiers = "w800dp-h400dp-land-xhdpi")
     @Test fun deckLandscape() = capture("deck_landscape") {
-        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons), { _, _ -> }, {})
+        DeckScreen(DeckState(status = Status.Connected, appName = "Desktop", buttons = buttons, features = DeckProtocol.REQUIRED_FEATURES), { _, _ -> }, {})
     }
 
     private val home = DeckProtocol.Layout(DeckProtocol.HOME_APP, "Desktop", buttons)
     private val spotify = DeckState(
         status = Status.Connected, app = "com.spotify.client", appName = "Spotify", home = home,
+        features = DeckProtocol.REQUIRED_FEATURES,
         buttons = listOf(
             DeckButton("0", "Previous", "⏮️", 0xFF1DB954.toInt()),
             DeckButton("1", "Play/Pause", "⏯️", 0xFF1DB954.toInt()),
@@ -79,6 +80,7 @@ class DeckScreenshotTest {
     )
     private val pycharm = DeckState(
         status = Status.Connected, app = "com.jetbrains.pycharm", appName = "PyCharm", pin = PinState.Pinned,
+        features = DeckProtocol.REQUIRED_FEATURES,
         buttons = listOf(
             DeckButton("0", "Run", "▶️", 0xFF15803D.toInt()),
             DeckButton("1", "Debug", "🐞", 0xFFC2410C.toInt()),
@@ -107,6 +109,18 @@ class DeckScreenshotTest {
     @Test fun deckPinnedApp() = capture("deck_pinned_app") { DeckScreen(pycharm, { _, _ -> }, {}) }
     @Test fun deckHomeWithRealIconAndPin() = capture("deck_home_icons_pins") {
         DeckScreen(pycharm.copy(showingHome = true), { _, _ -> }, {})
+    }
+
+    @Config(fontScale = 2f)
+    @Test fun appHeaderLargeFont() = capture("deck_app_header_font_2x") { DeckScreen(pycharm, { _, _ -> }, {}) }
+
+    @Config(fontScale = 2f)
+    @Test fun homeHeaderLargeFont() = capture("deck_home_header_font_2x") {
+        DeckScreen(pycharm.copy(showingHome = true), { _, _ -> }, {})
+    }
+
+    @Test fun outdatedAgent() = capture("deck_outdated_agent") {
+        DeckScreen(pycharm.copy(features = null, pin = PinState.Unsupported), { _, _ -> }, {})
     }
 
     @Test fun pairScreen() = capture("pair") { PairScreen(onPair = { true }) }

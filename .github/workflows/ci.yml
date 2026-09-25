@@ -54,11 +54,16 @@ jobs:
           path: android-app/app/build/outputs/roborazzi/
 
   agent:
-    name: Agent syntax check
-    runs-on: ubuntu-latest
+    name: Agent tests
+    # The agent uses AppKit/Quartz through PyObjC, which only installs on macOS.
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: macos-agent
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m py_compile macos-agent/agent.py
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q tests

@@ -58,6 +58,23 @@ class DeckProtocolTest {
         assertJson("""{"type":"reorder","ids":["pin:a","0","1"]}""", DeckProtocol.reorder(listOf("pin:a", "0", "1")))
     }
 
+    @Test fun `parses features, and pins need the pins feature`() {
+        val l = DeckProtocol.parseLayout("""{"type":"layout","features":["home","pins"],"pinned":false}""")!!
+        assertEquals(setOf("home", "pins"), l.features)
+        assertEquals(PinState.NotPinned, l.pin)
+        val noPins = DeckProtocol.parseLayout("""{"type":"layout","features":["home"],"pinned":false}""")!!
+        assertEquals(PinState.Unsupported, noPins.pin)
+        assertNull(DeckProtocol.parseLayout(TestData.layoutJson)!!.features)   // an agent too old to say
+    }
+
+    @Test fun `parses the images sent with a layout`() {
+        val l = DeckProtocol.parseLayout(
+            """{"type":"layout","buttons":[{"id":"0","image":"sha1:ab"}],"images":{"sha1:ab":"iVBORw0=","bad":null}}"""
+        )!!
+        assertEquals(mapOf("sha1:ab" to "iVBORw0="), l.images)
+        assertEquals("sha1:ab", l.buttons.single().image)   // the ViewModel swaps in the bytes
+    }
+
     @Test fun `image references are never shown as text`() {
         val l = DeckProtocol.parseLayout(
             """{"type":"layout","buttons":[{"id":"0","icon":"app:com.spotify.client"},{"id":"1","icon":"logo:spotify-icon"},{"id":"2","icon":"🎵"}]}"""

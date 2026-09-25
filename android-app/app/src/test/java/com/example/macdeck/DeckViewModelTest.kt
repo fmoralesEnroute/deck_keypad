@@ -158,6 +158,22 @@ class DeckViewModelTest {
         assertEquals(listOf("B", "A"), vm.state.value.buttons.map { it.label })
     }
 
+    @Test fun `image references resolve to bytes sent once per connection`() = runTest {
+        val first = """{"type":"layout","features":["home","pins","reorder","images"],"app":"a","isHome":true,
+            "buttons":[{"id":"0","label":"Spotify","image":"sha1:s"}],"images":{"sha1:s":"U1BPVElGWQ=="}}"""
+        val second = """{"type":"layout","features":["home","pins","reorder","images"],"app":"b","isHome":true,
+            "buttons":[{"id":"0","label":"Spotify","image":"sha1:s"},{"id":"1","label":"Legacy","image":"TEVHQUNZ"}],"images":{}}"""
+        transport.next { emit(open()); emit(WsEvent.Message(first)); emit(WsEvent.Message(second)); awaitCancellation() }
+        val vm = vm()
+        vm.start()
+        runCurrent()
+
+        // The second layout only refers to the image; the bytes from the first are reused.
+        // An older agent's inline base64 is kept as it is.
+        assertEquals(listOf("U1BPVElGWQ==", "TEVHQUNZ"), vm.state.value.buttons.map { it.image })
+        assertEquals(DeckProtocol.REQUIRED_FEATURES, vm.state.value.features)
+    }
+
     @Test fun `pin does nothing while disconnected`() = runTest {
         val vm = vm()
         vm.setPinned("com.x", true)
