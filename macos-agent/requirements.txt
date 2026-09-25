@@ -1,4 +1,4 @@
-websockets>=13
+websockets>=17.1
 pyobjc-framework-Cocoa>=10
 pyobjc-framework-Quartz>=10
 pyobjc-framework-ApplicationServices>=10
