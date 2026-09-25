@@ -22,7 +22,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4   # also validates the wrapper jar
+      - uses: gradle/actions/setup-gradle@v6   # also validates the wrapper jar
       - run: ./gradlew lintDebug testDebugUnitTest assembleRelease
       - if: failure()
         uses: actions/upload-artifact@v4
@@ -45,7 +45,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew verifyRoborazziDebug
       - if: failure()
         uses: actions/upload-artifact@v4
