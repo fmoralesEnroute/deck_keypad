@@ -1,5 +1,8 @@
 package com.example.macdeck
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -9,13 +12,20 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.geometry.center
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -63,6 +73,166 @@ class DeckUiTest {
         deck(Status.Connected)
         compose.onNodeWithText("🔍").assertDoesNotExist()
         compose.onNodeWithText("⏯").assertExists()
+    }
+
+    @Test fun homeButtonShowsTheDefaultKeysAndPressesThemAsHome() {
+        val pressed = mutableListOf<Pair<String, DeckButton>>()
+        val home = DeckProtocol.Layout(DeckProtocol.HOME_APP, "Desktop", listOf(DeckButton("1", "Mission Control", "", 0)))
+        var state by mutableStateOf(
+            DeckState(status = Status.Connected, app = "com.spotify.client", appName = "Spotify", buttons = buttons, home = home)
+        )
+        compose.setContent {
+            MacDeckTheme {
+                DeckScreen(
+                    state,
+                    onPress = { app, b -> pressed += app to b },
+                    onUnpair = {},
+                    onShowHome = { state = state.copy(showingHome = it) },
+                )
+            }
+        }
+
+        compose.onNodeWithContentDescription("Home keys").performClick()
+        compose.onNodeWithText("Mission Control").performClick()
+        assertEquals(listOf(DeckProtocol.HOME_APP to home.buttons.single()), pressed)
+
+        compose.onNodeWithContentDescription("Back to Spotify keys").performClick()
+        compose.onNodeWithText("Spotlight").assertExists()
+    }
+
+    private val home = DeckProtocol.Layout(
+        DeckProtocol.HOME_APP, "Desktop",
+        listOf(
+            DeckButton("0", "Spotlight", "🔍", 0),
+            DeckButton("pin:com.jetbrains.pycharm", "PyCharm", "", 0, pinnedApp = "com.jetbrains.pycharm"),
+        ),
+    )
+    /** The pinned PyCharm key, not the "← PyCharm" back button. */
+    private val pycharmKey = hasText("PyCharm") and !hasContentDescription("Back to PyCharm keys")
+
+    private val pycharm = DeckState(
+        status = Status.Connected, app = "com.jetbrains.pycharm", appName = "PyCharm", buttons = buttons, home = home,
+        pin = PinState.NotPinned,
+    )
+
+    @Test fun pinTogglesTheCurrentApp() {
+        val calls = mutableListOf<Pair<String, Boolean>>()
+        var state by mutableStateOf(pycharm)
+        compose.setContent {
+            MacDeckTheme {
+                DeckScreen(state, { _, _ -> }, {}, onSetPinned = { app, pinned -> calls += app to pinned; state = state.copy(pin = if (pinned) PinState.Pinned else PinState.NotPinned) })
+            }
+        }
+
+        compose.onNodeWithContentDescription("Pin to Home").performClick()
+        compose.onNodeWithContentDescription("Pinned to Home. Unpin").performClick()
+        assertEquals(listOf("com.jetbrains.pycharm" to true, "com.jetbrains.pycharm" to false), calls)
+    }
+
+    @Test fun appsAlreadyOnHomeShowOnHomeAndCantBePinned() {
+        val calls = mutableListOf<Pair<String, Boolean>>()
+        compose.setContent {
+            MacDeckTheme { DeckScreen(pycharm.copy(pin = PinState.OnHome), { _, _ -> }, {}, onSetPinned = { a, p -> calls += a to p }) }
+        }
+        compose.onNodeWithContentDescription("Already on Home").assertExists()
+        compose.onNodeWithText("On Home").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Pin to Home").assertDoesNotExist()
+        assertEquals(emptyList<Pair<String, Boolean>>(), calls)
+    }
+
+    @Test fun pinIsHiddenWhenTheAgentCantPin() {
+        compose.setContent { MacDeckTheme { DeckScreen(pycharm.copy(pin = PinState.Unsupported), { _, _ -> }, {}) } }
+        compose.onNodeWithContentDescription("Home keys").assertExists()
+        compose.onNodeWithContentDescription("Pin to Home").assertDoesNotExist()
+        compose.onNodeWithText("Pinned").assertDoesNotExist()
+    }
+
+    @Test fun pinIsHiddenOnTheHomeKeys() {
+        compose.setContent { MacDeckTheme { DeckScreen(pycharm.copy(showingHome = true), { _, _ -> }, {}) } }
+        compose.onNodeWithContentDescription("Pin to Home").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back to PyCharm keys").assertExists()
+    }
+
+    private fun homeScreen(
+        state: DeckState = pycharm.copy(showingHome = true),
+        onPress: (String, DeckButton) -> Unit = { _, _ -> },
+        onSetPinned: (String, Boolean) -> Unit = { _, _ -> },
+        onReorder: (List<String>) -> Unit = {},
+    ) = compose.setContent {
+        MacDeckTheme { DeckScreen(state, onPress, {}, onSetPinned = onSetPinned, onReorderHome = onReorder) }
+    }
+
+    @Test fun longPressEntersEditModeAndTheBadgeRemovesAPinnedApp() {
+        val calls = mutableListOf<Pair<String, Boolean>>()
+        homeScreen(onSetPinned = { app, pinned -> calls += app to pinned })
+
+        compose.onNode(pycharmKey).performTouchInput { longClick() }
+        compose.onNodeWithText("Done").assertExists()
+        compose.onNodeWithContentDescription("Remove PyCharm from Home").performClick()
+        assertEquals(listOf("com.jetbrains.pycharm" to false), calls)
+    }
+
+    @Test fun onlyPinnedAppsCanBeRemoved() {
+        homeScreen()
+        compose.onNodeWithContentDescription("Edit Home keys").performClick()
+        compose.onNodeWithContentDescription("Remove PyCharm from Home").assertExists()
+        compose.onNodeWithContentDescription("Remove Spotlight from Home").assertDoesNotExist()
+    }
+
+    @Test fun keysDontFireWhileEditingAndDoneLeavesEditMode() {
+        val pressed = mutableListOf<String>()
+        homeScreen(onPress = { _, b -> pressed += b.label })
+
+        compose.onNodeWithContentDescription("Edit Home keys").performClick()
+        compose.onNodeWithText("Spotlight").performClick()
+        assertEquals(emptyList<String>(), pressed)
+
+        compose.onNodeWithText("Done").performClick()
+        compose.onNodeWithText("Spotlight").performClick()
+        assertEquals(listOf("Spotlight"), pressed)
+    }
+
+    @Test fun draggingAKeyReordersHome() {
+        val orders = mutableListOf<List<String>>()
+        homeScreen(onReorder = { orders += it })
+        compose.onNodeWithContentDescription("Edit Home keys").performClick()
+
+        // Drag Spotlight (first) onto PyCharm (second), in small steps like a finger.
+        val from = compose.onNodeWithText("Spotlight").fetchSemanticsNode().boundsInRoot
+        val to = compose.onNode(pycharmKey).fetchSemanticsNode().boundsInRoot
+        compose.onRoot().performTouchInput {
+            down(from.center)
+            repeat(10) { moveBy((to.center - from.center) / 10f) }
+            up()
+        }
+        assertEquals(listOf(listOf("pin:com.jetbrains.pycharm", "0")), orders)
+    }
+
+    @Test fun talkBackCanMoveKeysWithoutDragging() {
+        val orders = mutableListOf<List<String>>()
+        homeScreen(onReorder = { orders += it })
+        compose.onNodeWithContentDescription("Edit Home keys").performClick()
+
+        val actions = compose.onNodeWithText("Spotlight").fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        compose.runOnIdle { actions.single { it.label == "Move later" }.action() }
+        assertEquals(listOf(listOf("pin:com.jetbrains.pycharm", "0")), orders)
+    }
+
+    @Test fun anAppWithoutItsOwnKeysShowsAnEditableHome() {
+        homeScreen(DeckState(status = Status.Connected, app = "com.unknown", appName = "Desktop", buttons = home.buttons, isHome = true))
+        compose.onNodeWithContentDescription("Edit Home keys").assertExists()
+        compose.onNodeWithContentDescription("Home keys").assertDoesNotExist()
+    }
+
+    @Test fun appKeysCantBeEdited() {
+        homeScreen(pycharm)
+        compose.onNodeWithContentDescription("Edit Home keys").assertDoesNotExist()
+        compose.onNodeWithText("Spotlight").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnLongClick))
+    }
+
+    @Test fun noHomeButtonWithoutHomeKeys() {
+        deck(Status.Connected)
+        compose.onNodeWithContentDescription("Home keys").assertDoesNotExist()
     }
 
     @Test fun keysAreDisabledWhileDisconnected() {

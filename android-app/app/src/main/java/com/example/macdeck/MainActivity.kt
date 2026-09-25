@@ -1,5 +1,6 @@
 package com.example.macdeck
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -30,6 +31,24 @@ class MainActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
+        if (savedInstanceState == null) handlePairingIntent(intent)
         setContent { MacDeckApp(vm) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handlePairingIntent(intent)
+    }
+
+    /** `agent.py --usb` starts the app with the pairing: am start -a ….PAIR --es pairing '{…}'. */
+    private fun handlePairingIntent(intent: Intent?) {
+        if (intent?.action != ACTION_PAIR) return
+        intent.getStringExtra(EXTRA_PAIRING)?.let(::parsePairing)?.let(vm::offerUsbPairing)
+        setIntent(Intent(this, MainActivity::class.java)) // don't re-offer after a config change
+    }
+
+    companion object {
+        const val ACTION_PAIR = "com.example.macdeck.PAIR"
+        const val EXTRA_PAIRING = "pairing"
     }
 }

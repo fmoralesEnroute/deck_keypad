@@ -26,6 +26,24 @@ Python may accept incoming network connections, click Allow.
 The agent prints a QR code, plus the IP, port, token and certificate
 fingerprint in case you'd rather type them in.
 
+### Or connect over USB
+
+```bash
+python3 agent.py --usb
+```
+
+Plug the phone in with USB debugging on. The agent tunnels the phone's
+`localhost` to your Mac through the cable (`adb reverse`), opens MacDeck and
+hands it the pairing; tap **Connect** on the phone. No Wi-Fi or QR code is
+involved, and in this mode the agent only listens on `127.0.0.1`, so nothing on
+the network can reach it. Unplugging and plugging back in reconnects. The agent
+finds `adb` on your `PATH`, in `$ANDROID_HOME`, or in Android Studio's default
+SDK folder.
+
+On Wi-Fi, the agent advertises your Wi-Fi/Ethernet address even when a VPN is
+connected (a VPN address is unreachable from the phone). Set `MACDECK_HOST` to
+override it.
+
 ## 2. Run the Android app
 
 Open `android-app/` in Android Studio (File → Open) and let it sync, or build
@@ -51,7 +69,42 @@ as you save; no restart needed.
 }
 ```
 
-Apps without a profile get the `"default"` buttons.
+Apps without a profile get the `"default"` buttons. While an app's own keys are
+showing, the phone's **Home** button switches to the `"default"` keys (and
+**‹ App** switches back); bringing another app to the front on the Mac shows
+that app's keys again.
+
+### Pinning apps to Home
+
+While an app's keys are showing, **Pin** adds that app to the Home keys (with
+its real icon); tapping it there brings the app to the front on your Mac.
+**Pinned** unpins it. Pins are stored in `macos-agent/pins.json`. Apps that a default
+key already opens (like Spotify) show **On Home** instead, so they can't be
+added twice.
+
+### Rearranging Home
+
+On the Home keys, long-press any key (or tap **Edit**), then drag keys where you
+want them. Pinned apps show a **✕** to remove them. Tap **Done** when finished.
+The order is saved on the Mac in `macos-agent/home_order.json` (by key name, so
+editing `profiles.json` doesn't scramble it). With TalkBack, use the key's
+**Move earlier** / **Move later** actions instead of dragging.
+
+When the app in front has no keys of its own, the phone shows the Home keys
+(defaults plus pinned apps, in your order) and they can be edited there too.
+
+### Logos and app icons
+
+A key's `"icon"` can be an emoji, or:
+
+- `"logo:spotify-icon"`: a brand logo from `macos-agent/logos/`. These come from
+  [SVG Logos](https://github.com/gilbarbara/logos) (the set Streamline hosts at
+  streamlinehq.com/icons/svg-logos), which is CC0. To add one, download
+  `https://cdn.jsdelivr.net/gh/gilbarbara/logos/logos/<name>.svg` into `logos/`.
+  Very dark logos (like OpenAI's) are drawn on a white tile so they show up on the keys.
+- `"app:com.spotify.client"`: the app's own macOS icon (bundle ID or app name).
+
+An app profile's `"logo"` is used for that app's key when it's pinned to Home.
 
 Apps listed in `"ignore_apps"` never change the keys: the phone keeps showing
 the previous app's buttons when one of them comes to the front. It ships with
@@ -82,6 +135,13 @@ punctuation, `f1`–`f12`, `up/down/left/right`, `return`, `tab`, `space`,
 `escape`, `delete`, `home`, `end`, `pageup`, `pagedown`.
 
 ## Troubleshooting
+
+The agent restarts itself when `agent.py` changes (if the new version compiles),
+so updates apply without restarting it by hand. `profiles.json` reloads on save.
+
+**"Can't reach your Mac".** Check the host the phone saved matches your Mac's
+Wi-Fi address (the agent prints it), not a VPN address; unpair and scan again,
+or use `--usb`.
 
 **A key does nothing.** Look at the agent's terminal: every press prints
 `Press: <label> -> <kind>`, and a failure prints `Action failed:` with the

@@ -33,6 +33,12 @@ class PairingTest {
         assertFalse(TestData.pairing.copy(certSha256 = "AAAA").isValid) // wrong length
     }
 
+    @Test fun `loopback pairings are USB pairings`() {
+        assertTrue(TestData.usbPairing.isUsb)
+        assertTrue(TestData.pairing.copy(host = "localhost").isUsb)
+        assertFalse(TestData.pairing.isUsb)
+    }
+
     @Test fun `parses the agent QR payload`() {
         val p = parsePairing("""{"h":"192.168.1.20","p":8765,"t":"tok","f":"${TestData.FINGERPRINT}"}""")
         assertEquals(TestData.pairing, p)
@@ -49,5 +55,10 @@ object TestData {
     /** base64url (no padding) of 32 zero bytes. */
     const val FINGERPRINT = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     val pairing = Pairing("192.168.1.20", 8765, "tok", FINGERPRINT)
+    val usbPairing = Pairing("127.0.0.1", 8765, "tok", FINGERPRINT)
     val layoutJson = """{"type":"layout","app":"com.x","appName":"X","buttons":[{"id":"0","label":"Go"}]}"""
+
+    fun layoutWithHome(app: String) =
+        """{"type":"layout","app":"$app","appName":"$app","pinned":false,"buttons":[{"id":"0","label":"App key"}],
+           "home":{"app":"macdeck.home","appName":"Desktop","buttons":[{"id":"0","label":"Spotlight"}]}}"""
 }

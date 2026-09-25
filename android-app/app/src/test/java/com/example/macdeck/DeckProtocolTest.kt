@@ -1,6 +1,7 @@
 package com.example.macdeck
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.json.JSONObject
@@ -15,6 +16,66 @@ class DeckProtocolTest {
         assertEquals("com.x", l.app)
         assertEquals("X", l.appName)
         assertEquals(listOf(DeckButton("0", "Go", "🚀", 0xFF112233.toInt())), l.buttons)
+    }
+
+    @Test fun `parses the home keys sent with an app layout`() {
+        val l = DeckProtocol.parseLayout(
+            """{"type":"layout","app":"com.spotify.client","appName":"Spotify","buttons":[{"id":"1","label":"Play"}],
+               "home":{"app":"macdeck.home","appName":"Desktop","buttons":[{"id":"1","label":"Mission Control"}]}}"""
+        )!!
+        val home = l.home!!
+        assertEquals(DeckProtocol.HOME_APP, home.app)
+        assertEquals("Desktop", home.appName)
+        assertEquals(listOf("Mission Control"), home.buttons.map { it.label })
+        assertNull(home.home)
+    }
+
+    @Test fun `parses app icons, pinned apps and the pinned flag`() {
+        val l = DeckProtocol.parseLayout(
+            """{"type":"layout","app":"com.jetbrains.pycharm","pinned":true,"buttons":[],
+               "home":{"buttons":[{"id":"pin:com.jetbrains.pycharm","label":"PyCharm","image":"iVBORw0=","pinned":"com.jetbrains.pycharm"},
+                                   {"id":"0","label":"Spotlight","image":""}]}}"""
+        )!!
+        assertEquals(PinState.Pinned, l.pin)
+        val (pinnedKey, plainKey) = l.home!!.buttons
+        assertEquals("iVBORw0=", pinnedKey.image)
+        assertEquals("com.jetbrains.pycharm", pinnedKey.pinnedApp)
+        assertNull(plainKey.image)
+        assertNull(plainKey.pinnedApp)
+    }
+
+    @Test fun `pin state tells apart unsupported, pinned, not pinned and already on Home`() {
+        fun pin(extra: String) = DeckProtocol.parseLayout("""{"type":"layout","app":"a"$extra}""")!!.pin
+        assertEquals(PinState.Unsupported, pin(""))            // an agent without pinning
+        assertEquals(PinState.NotPinned, pin(""","pinned":false"""))
+        assertEquals(PinState.Pinned, pin(""","pinned":true"""))
+        assertEquals(PinState.OnHome, pin(""","pinned":true,"onHome":true"""))
+    }
+
+    @Test fun `parses isHome and builds reorder messages`() {
+        assertTrue(DeckProtocol.parseLayout("""{"type":"layout","isHome":true}""")!!.isHome)
+        assertFalse(DeckProtocol.parseLayout(TestData.layoutJson)!!.isHome)
+        assertJson("""{"type":"reorder","ids":["pin:a","0","1"]}""", DeckProtocol.reorder(listOf("pin:a", "0", "1")))
+    }
+
+    @Test fun `image references are never shown as text`() {
+        val l = DeckProtocol.parseLayout(
+            """{"type":"layout","buttons":[{"id":"0","icon":"app:com.spotify.client"},{"id":"1","icon":"logo:spotify-icon"},{"id":"2","icon":"🎵"}]}"""
+        )!!
+        assertEquals(listOf("", "", "🎵"), l.buttons.map { it.icon })
+    }
+
+    @Test fun `builds pin and unpin messages`() {
+        assertJson("""{"type":"pin","app":"com.x"}""", DeckProtocol.pin("com.x", pinned = true))
+        assertJson("""{"type":"unpin","app":"com.x"}""", DeckProtocol.pin("com.x", pinned = false))
+    }
+
+    @Test fun `home keys default to the home app id and are optional`() {
+        assertEquals(
+            DeckProtocol.HOME_APP,
+            DeckProtocol.parseLayout("""{"type":"layout","home":{"buttons":[]}}""")!!.home!!.app,
+        )
+        assertNull(DeckProtocol.parseLayout(TestData.layoutJson)!!.home)
     }
 
     @Test fun `skips malformed buttons instead of failing the whole layout`() {

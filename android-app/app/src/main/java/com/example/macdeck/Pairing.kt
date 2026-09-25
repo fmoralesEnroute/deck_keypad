@@ -22,6 +22,10 @@ data class Pairing(val host: String, val port: Int, val token: String, val certS
     val isValid: Boolean
         get() = token.isNotBlank() && url() != null && certSha256Bytes() != null
 
+    /** A pairing that goes through adb's USB tunnel rather than the network. */
+    val isUsb: Boolean
+        get() = host == "127.0.0.1" || host == "::1" || host.equals("localhost", ignoreCase = true)
+
     fun certSha256Bytes(): ByteArray? =
         runCatching { Base64.getUrlDecoder().decode(certSha256.trim()) }.getOrNull()?.takeIf { it.size == 32 }
 }

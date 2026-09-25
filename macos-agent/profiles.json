@@ -6,14 +6,65 @@
       { "label": "Spotlight", "icon": "🔍", "color": "#5B6770", "action": { "kind": "hotkey", "keys": ["cmd", "space"] } },
       { "label": "Mission Control", "icon": "🪟", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["ctrl", "up"] } },
       { "label": "Screenshot", "icon": "📸", "color": "#8E6C8A", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "4"] } },
-      { "label": "VS Code", "icon": "💻", "color": "#2F7FC1", "action": { "kind": "open_app", "app": "Visual Studio Code" } },
-      { "label": "Spotify", "icon": "🎵", "color": "#1DB954", "action": { "kind": "open_app", "app": "Spotify" } },
+      { "label": "Spotify", "icon": "logo:spotify-icon", "color": "#1DB954", "action": { "kind": "open_app", "app": "Spotify" } },
       { "label": "Lock", "icon": "🔒", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["ctrl", "cmd", "q"] } }
     ]
   },
   "apps": {
+    "com.anthropic.claudefordesktop": {
+      "name": "Claude",
+      "logo": "claude-icon",
+      "buttons": [
+        { "label": "New session", "icon": "\u270d\ufe0f", "color": "#D97757", "action": { "kind": "hotkey", "keys": ["cmd", "n"] } },
+        { "label": "Command palette", "icon": "\ud83d\udd0e", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "k"] } },
+        { "label": "Sidebar", "icon": "\ud83d\udcd1", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "b"] } },
+        { "label": "Reopen closed", "icon": "\u21a9\ufe0f", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "t"] } },
+        { "label": "Find", "icon": "\ud83d\udd0d", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "f"] } },
+        { "label": "Open folder", "icon": "\ud83d\udcc2", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "o"] } },
+        { "label": "Close pane", "icon": "\u2716\ufe0f", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "\\"] } },
+        { "label": "Settings", "icon": "\u2699\ufe0f", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", ","] } },
+        { "label": "Shortcuts", "icon": "\u2328\ufe0f", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "/"] } }
+      ]
+    },
+    "com.todesktop.230313mzl4w4u92": {
+      "name": "Cursor",
+      "logo": "cursor-icon",
+      "buttons": [
+        { "label": "Chat", "icon": "\ud83d\udcac", "color": "#6E56CF", "action": { "kind": "hotkey", "keys": ["cmd", "l"] } },
+        { "label": "Agent", "icon": "\ud83e\udd16", "color": "#6E56CF", "action": { "kind": "hotkey", "keys": ["cmd", "i"] } },
+        { "label": "Inline edit", "icon": "\u270f\ufe0f", "color": "#7C3AED", "action": { "kind": "hotkey", "keys": ["cmd", "k"] } },
+        { "label": "Mode menu", "icon": "\ud83c\udf9b\ufe0f", "color": "#6E56CF", "action": { "kind": "hotkey", "keys": ["cmd", "."] } },
+        { "label": "Accept all", "icon": "\u2705", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["cmd", "return"] } },
+        { "label": "Reject", "icon": "\u274c", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["cmd", "backspace"] } },
+        { "label": "Commands", "icon": "\u2318", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "p"] } },
+        { "label": "Quick open", "icon": "\ud83d\udcc4", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "p"] } },
+        { "label": "Terminal", "icon": "\u2328\ufe0f", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["ctrl", "`"] } },
+        { "label": "Sidebar", "icon": "\ud83d\udcc1", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "b"] } },
+        { "label": "Comment", "icon": "\ud83d\udcac", "color": "#0F766E", "action": { "kind": "hotkey", "keys": ["cmd", "/"] } },
+        { "label": "Save all", "icon": "\ud83d\udcbe", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "s"] } }
+      ]
+    },
+    "com.openai.codex": {
+      "name": "ChatGPT",
+      "logo": "openai-icon",
+      "buttons": [
+        { "label": "New chat", "icon": "\u270d\ufe0f", "color": "#10A37F", "action": { "kind": "hotkey", "keys": ["cmd", "n"] } },
+        { "label": "Commands", "icon": "\ud83d\udd0e", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "k"] } },
+        { "label": "Search files", "icon": "\ud83d\udcc4", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "p"] } },
+        { "label": "Sidebar", "icon": "\ud83d\udcd1", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "b"] } },
+        { "label": "Previous chat", "icon": "\u2b05\ufe0f", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "["] } },
+        { "label": "Next chat", "icon": "\u27a1\ufe0f", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "]"] } },
+        { "label": "Rename chat", "icon": "\u270f\ufe0f", "color": "#7C3AED", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "r"] } },
+        { "label": "Pin chat", "icon": "\ud83d\udccc", "color": "#10A37F", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "p"] } },
+        { "label": "Archive chat", "icon": "\ud83d\uddc4\ufe0f", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "a"] } },
+        { "label": "File tree", "icon": "\ud83c\udf33", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "e"] } },
+        { "label": "Bottom panel", "icon": "\u2b07\ufe0f", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "j"] } },
+        { "label": "Review panel", "icon": "\ud83d\udd0d", "color": "#4B5563", "action": { "kind": "hotkey", "keys": ["cmd", "alt", "b"] } }
+      ]
+    },
     "com.jetbrains.pycharm": {
       "name": "PyCharm",
+      "logo": "pycharm",
       "buttons": [
         { "label": "Run", "icon": "▶️", "color": "#15803D", "action": { "kind": "hotkey", "keys": ["ctrl", "r"] } },
         { "label": "Debug", "icon": "🐞", "color": "#C2410C", "action": { "kind": "hotkey", "keys": ["ctrl", "d"] } },
@@ -35,6 +86,7 @@
     },
     "com.microsoft.VSCode": {
       "name": "VS Code",
+      "logo": "visual-studio-code",
       "buttons": [
         { "label": "Commands", "icon": "⌘", "color": "#2F7FC1", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "p"] } },
         { "label": "Quick open", "icon": "📄", "color": "#2F7FC1", "action": { "kind": "hotkey", "keys": ["cmd", "p"] } },
@@ -53,6 +105,7 @@
     },
     "com.google.Chrome": {
       "name": "Chrome",
+      "logo": "chrome",
       "buttons": [
         { "label": "New tab", "icon": "➕", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "t"] } },
         { "label": "Reopen tab", "icon": "↩️", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "t"] } },
@@ -64,6 +117,7 @@
     },
     "com.apple.Safari": {
       "name": "Safari",
+      "logo": "safari",
       "buttons": [
         { "label": "New tab", "icon": "➕", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "t"] } },
         { "label": "Reopen tab", "icon": "↩️", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "t"] } },
@@ -84,6 +138,7 @@
     },
     "com.tinyspeck.slackmacgap": {
       "name": "Slack",
+      "logo": "slack-icon",
       "buttons": [
         { "label": "Jump to", "icon": "🔎", "color": "#611F69", "action": { "kind": "hotkey", "keys": ["cmd", "k"] } },
         { "label": "Unreads", "icon": "📬", "color": "#611F69", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "a"] } },
@@ -93,6 +148,7 @@
     },
     "us.zoom.xos": {
       "name": "Zoom",
+      "logo": "zoom-icon",
       "buttons": [
         { "label": "Mute", "icon": "🎙️", "color": "#B5543A", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "a"] } },
         { "label": "Video", "icon": "🎥", "color": "#3F7CAC", "action": { "kind": "hotkey", "keys": ["cmd", "shift", "v"] } },
@@ -101,6 +157,7 @@
     },
     "com.spotify.client": {
       "name": "Spotify",
+      "logo": "spotify-icon",
       "buttons": [
         { "label": "Previous", "icon": "⏮️", "color": "#1DB954", "action": { "kind": "media", "key": "previous" } },
         { "label": "Play/Pause", "icon": "⏯️", "color": "#1DB954", "action": { "kind": "media", "key": "play_pause" } },

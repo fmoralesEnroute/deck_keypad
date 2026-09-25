@@ -4,7 +4,26 @@ import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.round
+import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -16,18 +35,25 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -79,9 +105,34 @@ fun MacDeckApp(vm: DeckViewModel) {
                 .safeDrawingPadding()
         ) {
             if (state.pairing == null) PairScreen(onPair = vm::pair)
-            else DeckScreen(state, onPress = vm::press, onUnpair = vm::unpair)
+            else DeckScreen(
+                state,
+                onPress = vm::press,
+                onUnpair = vm::unpair,
+                onShowHome = vm::showHome,
+                onSetPinned = vm::setPinned,
+                onReorderHome = vm::reorderHome,
+            )
         }
+
+        state.usbOffer?.let { UsbPairingDialog(onAnswer = vm::answerUsbOffer) }
     }
+}
+
+@Composable
+private fun UsbPairingDialog(onAnswer: (Boolean) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onAnswer(false) },
+        title = { Text("Connect over USB?") },
+        text = {
+            Text(
+                "agent.py --usb on your Mac sent a pairing over the USB cable. " +
+                    "Connect through the cable instead of Wi-Fi?"
+            )
+        },
+        confirmButton = { TextButton(onClick = { onAnswer(true) }) { Text("Connect") } },
+        dismissButton = { TextButton(onClick = { onAnswer(false) }) { Text("Cancel") } },
+    )
 }
 
 @Composable
@@ -104,42 +155,92 @@ internal fun DeckScreen(
     state: DeckState,
     onPress: (app: String, button: DeckButton) -> Unit,
     onUnpair: () -> Unit,
+    onShowHome: (Boolean) -> Unit = {},
+    onSetPinned: (app: String, pinned: Boolean) -> Unit = { _, _ -> },
+    onReorderHome: (ids: List<String>) -> Unit = {},
 ) {
     var confirmUnpair by remember { mutableStateOf(false) }
+    val connected = state.status == Status.Connected
+
+    // What's on screen: the Home keys, or the keys of the app in front on the Mac.
+    val home = state.home?.takeIf { state.showingHome }
+    val app = home?.app ?: state.app
+    val appName = home?.appName ?: state.appName
+    val buttons = home?.buttons ?: state.buttons
+    // The Home keys are showing: the Home view of an app, or an app with no keys of its own.
+    val homeShown = home != null || state.isHome
+
+    // Edit mode: drag Home keys to rearrange them, ✕ to remove pinned apps.
+    var editing by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(homeShown, connected) { if (!homeShown || !connected) editing = false }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        val unpairButton = @Composable {
+            TextButton(onClick = { confirmUnpair = true }) { Text("Unpair", color = InkMuted) }
+        }
+        val actionRow = state.home != null || state.isHome
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = state.appName.ifBlank { "Waiting for your Mac" },
+                    text = appName.ifBlank { "Waiting for your Mac" },
                     color = Ink, fontSize = 24.sp, fontWeight = FontWeight.Medium,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 StatusLine(state.status)
             }
-            TextButton(onClick = { confirmUnpair = true }) {
-                Text("Unpair", color = InkMuted)
+            if (!actionRow) unpairButton()
+        }
+
+        // Home · Pin · Unpair on an app's keys; ← App · Edit · Unpair on the Home keys.
+        if (actionRow) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 10.dp).fillMaxWidth(),
+            ) {
+                if (editing) {
+                    Text(
+                        "Drag keys to rearrange",
+                        color = InkMuted, fontSize = 14.sp, modifier = Modifier.weight(1f),
+                    )
+                    Button(onClick = { editing = false }) { Text("Done") }
+                } else {
+                    if (state.home != null) {
+                        HomeToggle(showingHome = home != null, appName = state.appName, onShowHome = onShowHome)
+                    }
+                    if (state.home != null && home == null) {
+                        PinToggle(state.pin, enabled = connected) { onSetPinned(state.app, state.pin == PinState.NotPinned) }
+                    }
+                    if (homeShown) {
+                        HeaderPill(onClick = { editing = true }, enabled = connected) {
+                            Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Edit", modifier = Modifier.semantics { contentDescription = "Edit Home keys" })
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    unpairButton()
+                }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
-        Crossfade(targetState = state.app to state.buttons, label = "layout") { (app, buttons) ->
+        Crossfade(targetState = app to buttons, label = "layout") { (app, buttons) ->
             if (buttons.isEmpty() && state.status == Status.Connected) {
                 EmptyProfile(app)
             } else {
-                val keySize = 104.dp * LocalDensity.current.fontScale.coerceIn(1f, 1.5f)
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = keySize),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(buttons, key = { app + ":" + it.id }) { button ->
-                        // `app` is the layout this key belongs to, even if a newer one arrives mid-tap.
-                        DeckKey(button, enabled = state.status == Status.Connected) { onPress(app, button) }
-                    }
-                }
+                KeyGrid(
+                    app = app,
+                    buttons = buttons,
+                    connected = connected,
+                    editing = editing && homeShown,
+                    // `app` is the layout this key belongs to, even if a newer one arrives mid-tap.
+                    onPress = { onPress(app, it) },
+                    onStartEditing = if (homeShown) ({ editing = true }) else null,
+                    onRemove = { b -> b.pinnedApp?.let { onSetPinned(it, false) } },
+                    onReorder = { ordered -> onReorderHome(ordered.map { it.id }) },
+                )
             }
         }
     }
@@ -154,6 +255,172 @@ internal fun DeckScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmUnpair = false }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+/**
+ * The keys. In edit mode (Home keys only) a key can be dragged to a new place; the new order
+ * is reported once, when the drag ends. Long-pressing a Home key starts edit mode.
+ */
+@Composable
+private fun KeyGrid(
+    app: String,
+    buttons: List<DeckButton>,
+    connected: Boolean,
+    editing: Boolean,
+    onPress: (DeckButton) -> Unit,
+    onStartEditing: (() -> Unit)?,
+    onRemove: (DeckButton) -> Unit,
+    onReorder: (List<DeckButton>) -> Unit,
+) {
+    // The order being dragged into shape; starts over whenever the agent sends new keys.
+    var order by remember(buttons) { mutableStateOf(buttons) }
+    var dragging by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    val gridState = rememberLazyGridState()
+    val currentOnReorder by rememberUpdatedState(onReorder)
+    val keySize = 104.dp * LocalDensity.current.fontScale.coerceIn(1f, 1.5f)
+
+    fun keyOf(b: DeckButton) = app + ":" + b.id
+    fun move(from: Int, to: Int) {
+        order = order.toMutableList().apply { add(to, removeAt(from)) }
+    }
+    fun endDrag() {
+        dragging = null
+        dragOffset = Offset.Zero
+        if (order.map { it.id } != buttons.map { it.id }) currentOnReorder(order)
+    }
+
+    val gridModifier = if (!editing) Modifier.fillMaxSize() else Modifier.fillMaxSize().pointerInput(app) {
+        detectDragGestures(
+            onDragStart = { pos ->
+                dragging = gridState.layoutInfo.visibleItemsInfo
+                    .firstOrNull { IntRect(it.offset, it.size).contains(pos.round()) }
+                    ?.key as? String
+                dragOffset = Offset.Zero
+            },
+            onDrag = { change, amount ->
+                val draggedKey = dragging ?: return@detectDragGestures
+                change.consume()
+                dragOffset += amount
+                val items = gridState.layoutInfo.visibleItemsInfo
+                val dragged = items.firstOrNull { it.key == draggedKey } ?: return@detectDragGestures
+                val center = dragged.offset.toOffset() + dragOffset +
+                    Offset(dragged.size.width / 2f, dragged.size.height / 2f)
+                val target = items.firstOrNull {
+                    it.key != draggedKey && IntRect(it.offset, it.size).contains(center.round())
+                } ?: return@detectDragGestures
+                val from = order.indexOfFirst { keyOf(it) == draggedKey }
+                val to = order.indexOfFirst { keyOf(it) == target.key }
+                if (from < 0 || to < 0) return@detectDragGestures
+                move(from, to)
+                // The key now lays out in the target's slot; keep it under the finger.
+                dragOffset += (dragged.offset - target.offset).toOffset()
+            },
+            onDragEnd = ::endDrag,
+            onDragCancel = ::endDrag,
+        )
+    }
+
+    LazyVerticalGrid(
+        state = gridState,
+        columns = GridCells.Adaptive(minSize = keySize),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        // While editing, vertical drags move keys instead of scrolling the grid.
+        userScrollEnabled = !editing,
+        modifier = gridModifier,
+    ) {
+        itemsIndexed(order, key = { _, b -> keyOf(b) }) { index, button ->
+            val isDragged = keyOf(button) == dragging
+            // TalkBack can't drag: offer "Move earlier/later" actions in edit mode instead.
+            val moveActions = if (!editing) emptyList() else buildList {
+                if (index > 0) add(CustomAccessibilityAction("Move earlier") {
+                    move(index, index - 1); currentOnReorder(order); true
+                })
+                if (index < order.lastIndex) add(CustomAccessibilityAction("Move later") {
+                    move(index, index + 1); currentOnReorder(order); true
+                })
+            }
+            DeckKey(
+                button,
+                enabled = connected,
+                editing = editing,
+                onLongPress = onStartEditing,
+                onRemove = if (editing && button.pinnedApp != null) ({ onRemove(button) }) else null,
+                accessibilityActions = moveActions,
+                modifier = if (isDragged) {
+                    Modifier.zIndex(1f).graphicsLayer {
+                        translationX = dragOffset.x
+                        translationY = dragOffset.y
+                        scaleX = 1.06f
+                        scaleY = 1.06f
+                    }
+                } else {
+                    Modifier.animateItem()
+                },
+                onPress = { onPress(button) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeaderPill(onClick: () -> Unit, enabled: Boolean = true, content: @Composable RowScope.() -> Unit) {
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
+        contentPadding = PaddingValues(horizontal = 14.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = KeyCap, contentColor = Ink,
+            disabledContainerColor = KeyCap, disabledContentColor = InkMuted,
+        ),
+        modifier = Modifier.widthIn(max = 180.dp),
+        content = content,
+    )
+}
+
+/**
+ * "+ Pin" adds the current app to the Home keys and "✓ Pinned" removes it again.
+ * "✓ On Home" (not tappable) when a default Home key already opens the app.
+ * Hidden entirely when the agent doesn't support pinning.
+ */
+@Composable
+private fun PinToggle(pin: PinState, enabled: Boolean, onToggle: () -> Unit) {
+    val (label, description) = when (pin) {
+        PinState.Unsupported -> return
+        PinState.NotPinned -> "Pin" to "Pin to Home"
+        PinState.Pinned -> "Pinned" to "Pinned to Home. Unpin"
+        PinState.OnHome -> "On Home" to "Already on Home"
+    }
+    HeaderPill(onClick = onToggle, enabled = enabled && pin != PinState.OnHome) {
+        Icon(
+            if (pin == PinState.NotPinned) Icons.Filled.Add else Icons.Filled.Check,
+            contentDescription = null, modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(label, modifier = Modifier.semantics { contentDescription = description })
+    }
+}
+
+/** "Home" while an app's keys are shown; "‹ App" to go back while the Home keys are. */
+@Composable
+private fun HomeToggle(showingHome: Boolean, appName: String, onShowHome: (Boolean) -> Unit) {
+    HeaderPill(onClick = { onShowHome(!showingHome) }) {
+        Icon(
+            if (showingHome) Icons.AutoMirrored.Filled.ArrowBack else Icons.Filled.Home,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            if (showingHome) appName.ifBlank { "Back" } else "Home",
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            // TalkBack: say where the button goes, not just the app's name.
+            modifier = Modifier.semantics {
+                contentDescription = if (showingHome) "Back to ${appName.ifBlank { "app" }} keys" else "Home keys"
             },
         )
     }
@@ -193,22 +460,48 @@ private fun EmptyProfile(bundleId: String) {
 }
 
 @Composable
-private fun DeckKey(button: DeckButton, enabled: Boolean, onPress: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun DeckKey(
+    button: DeckButton,
+    enabled: Boolean,
+    editing: Boolean = false,
+    onLongPress: (() -> Unit)? = null,
+    onRemove: (() -> Unit)? = null,
+    accessibilityActions: List<CustomAccessibilityAction> = emptyList(),
+    modifier: Modifier = Modifier,
+    onPress: () -> Unit,
+) {
     val view = LocalView.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val glow = Color(button.color)
+    val image = remember(button.image) { button.image?.let(::decodeIcon) }
 
     Box(
-        Modifier
+        modifier
             .aspectRatio(1f)
             .offset(y = if (pressed) 2.dp else 0.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(if (pressed) KeyCapPressed else KeyCap)
-            .clickable(interactionSource = interaction, indication = null, enabled = enabled, role = Role.Button) {
+            .border(1.dp, if (editing) InkMuted.copy(alpha = 0.5f) else Color.Transparent, RoundedCornerShape(16.dp))
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                // In edit mode the grid owns touches (dragging), so keys don't fire.
+                enabled = enabled && !editing,
+                role = Role.Button,
+                onLongClickLabel = onLongPress?.let { "Edit Home keys" },
+                onLongClick = onLongPress?.let {
+                    {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        it()
+                    }
+                },
+            ) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onPress()
             }
+            .semantics { if (accessibilityActions.isNotEmpty()) customActions = accessibilityActions }
     ) {
         if (pressed) Box(Modifier.matchParentSize().background(glow.copy(alpha = 0.16f)))
 
@@ -217,9 +510,12 @@ private fun DeckKey(button: DeckButton, enabled: Boolean, onPress: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            if (button.icon.isNotBlank()) {
+            if (image != null) {
+                Image(image, contentDescription = null, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.height(6.dp))
+            } else if (button.icon.isNotBlank() || button.pinnedApp != null) {
                 Text(
-                    button.icon, fontSize = 30.sp,
+                    button.icon.ifBlank { "📌" }, fontSize = 30.sp,
                     modifier = if (button.label.isNotBlank()) Modifier.clearAndSetSemantics {} else Modifier,
                 )
                 Spacer(Modifier.height(6.dp))
@@ -240,8 +536,33 @@ private fun DeckKey(button: DeckButton, enabled: Boolean, onPress: () -> Unit) {
                 .height(if (pressed) 6.dp else 4.dp)
                 .background(if (enabled) glow else glow.copy(alpha = 0.35f))
         )
+
+        // Edit mode: ✕ removes a pinned app from Home. 44dp to touch, 26dp to see.
+        if (onRemove != null) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(44.dp)
+                    .clickable(role = Role.Button, onClickLabel = "Remove") { onRemove() }
+                    .semantics { contentDescription = "Remove ${button.label} from Home" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier.size(26.dp).clip(CircleShape).background(Problem),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
     }
 }
+
+/** Base64 PNG (an app icon from the agent) to a bitmap; null if it doesn't decode. */
+private fun decodeIcon(base64: String): ImageBitmap? = runCatching {
+    val bytes = java.util.Base64.getDecoder().decode(base64)
+    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+}.getOrNull()
 
 // --------------------------------------------------------------- pairing ---
 

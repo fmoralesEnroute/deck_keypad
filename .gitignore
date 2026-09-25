@@ -22,3 +22,7 @@ macos-agent/__pycache__/
 macos-agent/.token
 macos-agent/.cert.pem
 macos-agent/.key.pem
+
+# Apps pinned to the phone's Home keys (per Mac)
+macos-agent/pins.json
+macos-agent/home_order.json
